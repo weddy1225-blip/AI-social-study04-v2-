@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>環保小尖兵：行為回饋版</title>
+    <style>
+        :root {
+            --primary: #4CAF50; /* 環保綠 */
+            --secondary: #8BC34A;
+            --danger: #F44336;
+            --bg: #F1F8E9; 
+            --main-font: "Microsoft JhengHei", "微軟正黑體", sans-serif;
+        }
+        body { font-family: var(--main-font); background-color: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        #game-container { background: white; width: 100%; max-width: 850px; border-radius: 40px; border: 8px solid #FFF; box-shadow: 0 15px 50px rgba(0,0,0,0.1); padding: 40px; text-align: center; }
+        h1 { font-size: 55px; color: #2E7D32; margin-bottom: 10px; }
+        .page { display: none; }
+        .active { display: block; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* 題目區域樣式 */
+        #q-title { font-size: 45px; color: #1B5E20; margin: 30px 0 15px 0; font-weight: 900; }
+        #q-desc { font-size: 28px; color: #444; line-height: 1.6; margin-bottom: 40px; background: #E8F5E9; padding: 20px; border-radius: 20px; border-left: 10px solid #A5D6A7; }
+
+        .btn-main { background: var(--primary); color: white; border: none; padding: 20px 60px; font-size: 32px; border-radius: 100px; cursor: pointer; box-shadow: 0 8px 0 #388E3C; font-weight: bold; transition: 0.1s; }
+        .btn-main:active { transform: translateY(4px); box-shadow: 0 2px 0 #388E3C; }
+
+        .choice-card { background: #FFFFFF; border: 4px solid #C8E6C9; border-radius: 25px; padding: 30px; margin: 20px 0; cursor: pointer; font-size: 30px; font-weight: bold; color: #2E7D32; text-align: left; transition: 0.2s; box-shadow: 0 4px 0 #E0E0E0; }
+        .choice-card:hover { background: #F1F8E9; border-color: #8BC34A; transform: scale(1.02); }
+
+        /* 結果頁面樣式 */
+        .review-item { text-align: left; background: #FAFAFA; padding: 25px; border-radius: 20px; margin-bottom: 25px; border-left: 12px solid #CCC; }
+        .result-box { margin-top: 15px; padding: 20px; border-radius: 12px; font-size: 24px; line-height: 1.5; font-weight: bold; }
+        .is-good { background-color: #E8F5E9; color: #2E7D32; border: 2px solid #A5D6A7; }
+        .is-bad { background-color: #FFEBEE; color: #C62828; border: 2px solid #FFCDD2; }
+        
+        .score-display { font-size: 65px; font-weight: bold; color: #2E7D32; margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- 開始頁面 -->
+    <div id="page-intro" class="page active">
+        <h1>🌿 環保小尖兵</h1>
+        <p style="font-size: 30px; color: #555; line-height: 1.8;">
+            你的每一個決定，<br>都會影響我們的環境。<br>
+            <strong>準備好完成 5 項環保挑戰了嗎？</strong>
+        </p>
+        <button class="btn-main" onclick="startGame()">點我開始挑戰！</button>
+    </div>
+
+    <!-- 遊戲頁面 -->
+    <div id="page-game" class="page">
+        <div id="progress-text" style="color: #4CAF50; font-size: 24px; font-weight: bold;">挑戰進度：1 / 5</div>
+        <div id="question-area">
+            <h3 id="q-title"></h3>
+            <p id="q-desc"></p>
+            <div id="choices-container"></div>
+        </div>
+    </div>
+
+    <!-- 結果頁面 -->
+    <div id="page-result" class="page">
+        <h1>挑戰結算</h1>
+        <div id="final-score" class="score-display"></div>
+        <h3 style="text-align: left; font-size: 30px; color: #333; border-bottom: 4px solid #4CAF50; padding-bottom: 10px;">📋 行為紀錄與結果</h3>
+        <div id="review-list"></div>
+        <button class="btn-main" onclick="location.reload()">再玩一次</button>
+    </div>
+</div>
+
+<script>
+    const fullBank = [
+        { t: "🚰 刷牙的水龍頭", d: "刷牙刷到一半時，水一直流著。", a: "刷牙時先把水關掉", b: "讓水一直流到刷完", a_res: "【結果】省下很多乾淨水資源，大家都有水可以用！", b_res: "【後果】浪費了大量水，缺水季節村莊會面臨停水。", a_i: 0, b_i: -20 },
+        { t: "🛍️ 去超市買東西", d: "準備出門購物時。", a: "自己帶環保袋", b: "每次都拿新的塑膠袋", a_res: "【結果】減少了塑膠垃圾，海洋裡的魚兒更安全了。", b_res: "【後果】製造了難以分解的塑膠，污染了自然環境。", a_i: 0, b_i: -20 },
+        { t: "🍱 免洗餐具", d: "買晚餐時店員問要不要免洗筷。", a: "自備餐具", b: "每次都拿新的", a_res: "【結果】減少了垃圾產生，守護了森林資源。", b_res: "【後果】每天製造大量一次性垃圾，讓垃圾場爆滿。", a_i: 0, b_i: -20 },
+        { t: "💡 離開教室", d: "下課後教室裡已經沒有人。", a: "順手把燈和電扇關掉", b: "放著不管直接離開", a_res: "【結果】節省了能源，也減少了發電產生的污染。", b_res: "【後果】電費增加且無故消耗能源，增加環境負擔。", a_i: 0, b_i: -15 },
+        { t: "🚲 上學方式", d: "今天學校離家很近。", a: "騎腳踏車或走路", b: "一定要開車接送", a_res: "【結果】空氣變清新了，身體也變健康了！", b_res: "【後果】車輛排放廢氣，讓村莊的空氣變差了。", a_i: 0, b_i: -15 },
+        { t: "🚮 垃圾分類", d: "飲料瓶和紙張混在一起。", a: "分類後再丟入回收箱", b: "全部混在一起丟垃圾桶", a_res: "【結果】資源可以被重新利用，減少資源浪費。", b_res: "【後果】能回收的東西變成垃圾，增加焚化爐負擔。", a_i: 0, b_i: -20 },
+        { t: "🎒 撿到鉛筆盒", d: "你在操場撿到同學的鉛筆盒。", a: "交給老師或失物招領", b: "偷偷帶回家自己用", a_res: "【結果】同學找回心愛的東西很開心，你獲得了誠實名聲。", b_res: "【後果】同學很難過，你也背負了不誠實的陰影。", a_i: 0, b_i: -40 },
+        { t: "🚸 過馬路", d: "紅燈亮了，但現在路上完全沒車。", a: "遵守規範，等綠燈再走", b: "直接快速衝過去", a_res: "【結果】養成守法好習慣，保障自己的生命安全。", b_res: "【後果】容易讓駕駛反應不及，發生嚴重的意外。", a_i: 0, b_i: -35 },
+        { t: "🐾 受傷的小貓", d: "巷口有受傷的小貓在發抖。", a: "找大人幫忙聯絡醫院", b: "拿石頭嚇牠", a_res: "【結果】小貓得到救治，你展現了對生命的愛心。", b_res: "【後果】小貓受到二次傷害，生命面臨更大的危險。", a_i: 0, b_i: -35 },
+        { t: "🍚 珍惜食物", d: "看到自助餐裡有好多愛吃的菜。", a: "吃多少拿多少", b: "夾超多，吃不完再倒掉", a_res: "【結果】珍惜農夫的辛勞，減少了廚餘污染。", b_res: "【後果】浪費了珍貴食物，產生難聞的腐臭廚餘。", a_i: 0, b_i: -25 },
+        { t: "🐢 沙灘垃圾", d: "看到有人在沙灘留下塑膠吸管。", a: "撿起來丟進桶子", b: "不管它，讓它被沖走", a_res: "【結果】防止了海洋動物誤食塑膠。", b_res: "【後果】吸管流入大海，可能會插進海龜的鼻子。", a_i: 0, b_i: -20 },
+        { t: "📄 用過的紙", d: "有一張背面完全空白的考卷。", a: "當作計算紙使用", b: "揉成一團丟掉", a_res: "【結果】物盡其用，減少了紙張的浪費。", b_res: "【後果】浪費了森林資源。", a_i: 0, b_i: -15 },
+        { t: "🍎 果皮處理", d: "吃完香蕉剩下的果皮。", a: "放進廚餘回收桶", b: "隨手丟在路邊草地", a_res: "【結果】可以變成有機肥，讓大地更有養分。", b_res: "【後果】容易發臭招引蚊蟲，還會害路人滑倒。", a_i: 0, b_i: -20 },
+        { t: "📱 舊電池", d: "遙控器電池沒電了。", a: "送到超市回收桶", b: "丟進一般垃圾袋", a_res: "【結果】重金屬得到妥善處理。", b_res: "【後果】電池洩漏的有毒物質會污染土地和水源。", a_i: 0, b_i: -35 },
+        { t: "🚌 公車博愛座", d: "公車上有一位抱著小孩的媽媽。", a: "主動站起來讓座", b: "假裝看窗外不理會", a_res: "【結果】社會充滿愛心，你也心情愉快。", b_res: "【後果】讓需要的人感到無助與勞累。", a_i: 0, b_i: -20 },
+        { t: "🐟 河邊餵魚", d: "有人拿洋芋片餵河裡的魚。", a: "提醒他這樣會害魚生病", b: "跟著他一起餵魚", a_res: "【結果】守護了河流生態與魚兒的健康。", b_res: "【後果】油膩的零食污染水質，害魚生病死亡。", a_i: 0, b_i: -25 },
+        { t: "🌧️ 排水孔積水", d: "下雨時排水孔被垃圾塞住了。", a: "幫忙清開或通報老師", b: "跳過去，不理它", a_res: "【結果】水流順暢，學校操場不會淹水了。", b_res: "【後果】造成大積水，大家走路都會濕透。", a_i: 0, b_i: -20 },
+        { t: "🧃 喝完的飲料", d: "剛喝完的鋁箔包飲料瓶。", a: "洗乾淨壓扁後回收", b: "直接亂丟到垃圾桶", a_res: "【結果】縮小體積，資源回收更有效率。", b_res: "【後果】殘留液體發臭，資源無法被重複利用。", a_i: 0, b_i: -20 },
+        { t: "🖍️ 斷掉的彩色筆", d: "彩色筆沒水或壞掉了。", a: "送到專門回收點", b: "隨手丟進花圃裡", a_res: "【結果】維護了環境的整潔。", b_res: "【後果】塑膠殼在土裡永遠不會消失，傷害植物。", a_i: 0, b_i: -20 },
+        { t: "🌍 冷氣開關", d: "夏天冷氣房的門沒關緊。", a: "主動跑去關好門", b: "覺得沒差，放任不管", a_res: "【結果】冷氣不外洩，省電又愛地球。", b_res: "【後果】冷氣白開了，消耗更多電能造成溫室效應。", a_i: 0, b_i: -15 },
+        { t: "📢 上課秩序", d: "同學在背後一直想找你說話。", a: "提醒他等下課再說", b: "跟著他一起聊天", a_res: "【結果】大家都能專心上課，學習效率好。", b_res: "【後果】影響全班受教權，被老師處罰。", a_i: 0, b_i: -20 },
+        { t: "🫧 洗手乳用量", d: "洗手時想按很多洗手乳玩泡泡。", a: "只按一下，認真洗手", b: "連續按五下玩泡泡", a_res: "【結果】省下化學藥劑，減少水源污染。", b_res: "【後果】造成化學物質殘留，浪費洗滌資源。", a_i: 0, b_i: -10 },
+        { t: "📺 客廳沒人", d: "大家都在吃晚餐，電視還開著。", a: "先去把電視關掉", b: "隨便它播，懶得動", a_res: "【結果】節省一度電，也是愛護地球的表現。", b_res: "【後果】無意義的消耗能源，浪費家中電費。", a_i: 0, b_i: -15 },
+        { t: "⛰️ 山林垃圾", d: "去山上健行完剩下的空瓶。", a: "放在背包帶下山丢", b: "藏在草叢裡面", a_res: "【結果】保持山林原始美麗，守護森林。", b_res: "【後果】瓶子可能累積積水生蚊子，污染山林。", a_i: 0, b_i: -35 },
+        { t: "🐶 街頭流浪狗", d: "看到一群流浪狗在路邊。", a: "安靜走開或聯絡大人", b: "拿石頭丟牠們驅趕", a_res: "【結果】彼此相安無事，生命互相尊重。", b_res: "【後果】狗受驚嚇可能會反擊咬人，造成危險。", a_i: 0, b_i: -35 },
+        { t: "📚 借來的書", d: "看完圖書館的書卻懶得去還。", a: "準時送回圖書館", b: "放在家裡堆著半年", a_res: "【結果】讓下一位期待的人也能讀到好書。", b_res: "【後果】影響他人閱讀權利，自己也會被停權。", a_i: 0, b_i: -20 },
+        { t: "🌱 新種的小花", d: "花圃裡剛種下脆弱的小花苗。", a: "沿著步道走，不踩它", b: "故意從上面踩過去", a_res: "【結果】花兒順利綻放，大家心情都變好。", b_res: "【後果】小花夭折枯萎，土地變得光禿禿。", a_i: 0, b_i: -30 },
+        { t: "🚿 淋浴時間", d: "洗澡時覺得水溫很舒服不想出來。", a: "準時洗完，關水離開", b: "多洗20分鐘玩水", a_res: "【結果】節省了大量家庭用水。", b_res: "【後果】造成水費激增，且浪費寶貴水資源。", a_i: 0, b_i: -20 },
+        { t: "📦 快遞紙箱", d: "家裡有好多空紙箱。", a: "整理好送去資源回收", b: "當成一般垃圾燒掉", a_res: "【結果】紙纖維可以再生，減少砍樹。", b_res: "【後果】製造空氣污染，浪費可循環資源。", a_i: 0, b_i: -10 },
+        { t: "🐸 公園青蛙", d: "在水池邊看到可愛的小青蛙。", a: "安靜觀察後不驚擾牠", b: "抓回家養在罐子裡", a_res: "【結果】青蛙在自然界生活得很自在。", b_res: "【後果】青蛙因為離開家鄉，很快就死掉了。", a_i: 0, b_i: -30 },
+        { t: "🪑 教室桌椅", d: "同學在桌子上亂刻名字。", a: "告訴老師並勸阻他", b: "覺得好玩也跟著刻", a_res: "【結果】公物保持整潔，使用年限延長。", b_res: "【後果】桌面毀損，損壞了大家共同的財產。", a_i: 0, b_i: -25 },
+        { t: "🚦 等紅綠燈", d: "天氣很熱，離綠燈還有60秒。", a: "耐心在樹蔭下等待", b: "沒車就直接衝過去", a_res: "【結果】遵守規則，安全更有保障。", b_res: "【後果】養成不守法的僥倖心態，增加車禍風險。", a_i: 0, b_i: -35 },
+        { t: "🧹 大掃除", d: "這週輪到你負責掃廁所。", a: "認真清掃，讓廁所變香", b: "隨便潑水就去玩了", a_res: "【結果】全校同學都有乾淨的廁所可用。", b_res: "【後果】廁所發臭積水，影響公共衛生。", a_i: 0, b_i: -20 },
+        { t: "🥛 牛奶空盒", d: "早餐喝完的鮮奶盒。", a: "沖洗後壓扁回收", b: "直接丟進教室垃圾桶", a_res: "【結果】減少垃圾體積，也預防了異味。", b_res: "【後果】牛奶殘渣發臭，教室會有蒼蠅飛。", a_i: 0, b_i: -20 },
+        { t: "🎙️ 同學演講時", d: "同學正在台上發表，聲音很小。", a: "保持安靜，專心聆聽", b: "在台下跟旁邊人偷笑", a_res: "【結果】給予講者尊重，大家學會傾聽。", b_res: "【後果】傷害同學信心，建立嘲笑的壞風氣。", a_i: 0, b_i: -30 },
+        { t: "🌲 森林步道", d: "在山上看到有人隨地野炊。", a: "提醒這樣很危險並離開", b: "覺得很酷去旁邊看", a_res: "【結果】預防了森林大火的發生。", b_res: "【後果】一旦發生火災，整片森林都會消失。", a_i: 0, b_i: -40 },
+        { t: "🚮 垃圾桶滿了", d: "公園垃圾桶塞滿了廢棄物。", a: "帶回家或是找別的桶子", b: "硬塞在垃圾桶旁邊", a_res: "【結果】環境維持乾淨，野狗不會亂翻。", b_res: "【後果】垃圾被風吹散，公園變得髒亂不堪。", a_i: 0, b_i: -20 },
+        { t: "👵 鄰居奶奶", d: "看到鄰居奶奶提著重物上樓。", a: "主動問奶奶需不需要幫忙", b: "假裝沒看見跑走", a_res: "【結果】奶奶覺得很溫暖，鄰里關係真好。", b_res: "【後果】讓長輩覺得孤單辛苦，社會變冷漠。", a_i: 0, b_i: -15 },
+        { t: "🍃 落葉堆積", d: "操場落葉非常多。", a: "掃成一堆做有機肥", b: "用火燒掉比較快", a_res: "【結果】回饋大地養分，零污染。", b_res: "【後果】煙霧造成空氣品質變差，引發咳嗽。", a_i: 0, b_i: -35 },
+        { t: "🍬 分享時間", d: "你有兩顆糖果，同學沒帶。", a: "分享一顆給同學吃", b: "當面把兩顆都吃掉炫耀", a_res: "【結果】收獲了珍貴友誼與快樂。", b_res: "【後果】讓別人感到被排擠，友誼產生裂痕。", a_i: 0, b_i: -15 },
+        { t: "🐤 校園小鳥", d: "小鳥在樹下找蟲吃。", a: "遠遠觀察，不打擾牠", b: "大聲尖叫衝過去嚇牠", a_res: "【結果】小鳥在校園快樂安家。", b_res: "【後果】小鳥被嚇跑，再也不回這個校園。", a_i: 0, b_i: -20 },
+        { t: "🔦 手電筒沒電", d: "家裡手電筒壞了。", a: "檢查電池是否能回收", b: "整支丟進水溝裡", a_res: "【結果】避免了水質被重金屬污染。", b_res: "【後果】水溝被堵塞，且釋放有害化學物質。", a_i: 0, b_i: -35 },
+        { t: "👟 髒掉的鞋子", d: "鞋底沾滿了泥巴。", a: "在門外清掉泥巴再進去", b: "直接走進乾淨教室", a_res: "【結果】維持教室整潔，減少打掃負擔。", b_res: "【後果】教室滿地泥濘，大家都要重新打掃。", a_i: 0, b_i: -10 },
+        { t: "🍴 買飯不用餐具", d: "買午餐時店家給了免洗筷。", a: "退還給老闆，用自己的", b: "收下來，明天再丟掉", a_res: "【結果】減少了多餘垃圾的製造。", b_res: "【後果】製造了不必要的資源消耗。", a_i: 0, b_i: -15 },
+        { t: "🔊 公共場所", d: "在圖書館裡看見好笑的書。", a: "摀住嘴巴小聲地笑", b: "大聲地拍手狂笑", a_res: "【結果】維護了讀書氣氛，受人尊重。", b_res: "【後果】打擾到所有人，被趕出圖書館。", a_i: 0, b_i: -25 },
+        { t: "🎨 彩繪牆壁", d: "看到社區牆壁白白的。", a: "先詢問大人是否能畫畫", b: "直接拿噴漆亂塗鴉", a_res: "【結果】展現藝術才華，美化社區環境。", b_res: "【後果】破壞市容，還會被警察叔叔找上門。", a_i: 0, b_i: -30 },
+        { t: "🧊 吃不完的冰", d: "買了挫冰卻吃不完。", a: "先放冰箱，等一下再吃", b: "直接倒進洗手台裡", a_res: "【結果】不浪費食物，珍惜資源。", b_res: "【後果】洗手台被冰塊和配料堵塞發臭。", a_i: 0, b_i: -20 }
+    ];
+
+    let currentQuestions = [];
+    let currentIdx = 0;
+    let score = 100;
+    let history = [];
+
+    function startGame() {
+        // 隨機抽 5 題
+        currentQuestions = [...fullBank].sort(() => 0.5 - Math.random()).slice(0, 5);
+        currentIdx = 0; score = 100; history = [];
+        showPage('page-game');
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        if(currentIdx >= 5) { showResult(); return; }
+        document.getElementById('progress-text').innerText = `挑戰進度：${currentIdx + 1} / 5`;
+        const q = currentQuestions[currentIdx];
+        document.getElementById('q-title').innerText = q.t;
+        document.getElementById('q-desc').innerText = q.d;
+        document.getElementById('choices-container').innerHTML = `
+            <div class="choice-card" onclick="makeChoice('a')">A. ${q.a}</div>
+            <div class="choice-card" onclick="makeChoice('b')">B. ${q.b}</div>
+        `;
+    }
+
+    function makeChoice(type) {
+        const q = currentQuestions[currentIdx];
+        const isA = (type === 'a');
+        score += (isA ? q.a_i : q.b_i);
+        if(score > 100) score = 100;
+        if(score < 0) score = 0;
+
+        history.push({
+            title: q.t,
+            action: isA ? q.a : q.b,
+            result: isA ? q.a_res : q.b_res,
+            isA: isA
+        });
+
+        currentIdx++;
+        loadQuestion();
+    }
+
+    function showResult() {
+        showPage('page-result');
+        document.getElementById('final-score').innerText = `環保積分：${score}`;
+        const review = document.getElementById('review-list');
+        review.innerHTML = '';
+        history.forEach(item => {
+            review.innerHTML += `
+                <div class="review-item" style="border-left-color: ${item.isA ? '#4CAF50' : '#F44336'}">
+                    <strong style="font-size: 28px;">📍 ${item.title}</strong><br>
+                    <div style="margin: 10px 0; font-size: 24px; color: #666;">你的做法：${item.action}</div>
+                    <div class="result-box ${item.isA ? 'is-good' : 'is-bad'}">${item.result}</div>
+                </div>
+            `;
+        });
+    }
+
+    function showPage(id) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+</script>
+</body>
+</html>
